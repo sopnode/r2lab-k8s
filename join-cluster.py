@@ -151,7 +151,7 @@ def run(*, gateway, slicename, master, bp, nodes, pcs,
                     label=f"switch on {r2lab_pc_hostname(id)}",
                     command=[
                         Run("rhubarbe-pdu", "on", r2lab_pc_hostname(id)),
-                        Run("ping", "-c 60", r2lab_pc_hostname(id))
+                        Run("ping", "-c 60 -q", r2lab_pc_hostname(id))
                     ]
                 ) for id, node in pc_index.items()
             ]
