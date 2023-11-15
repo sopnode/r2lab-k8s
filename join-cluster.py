@@ -19,7 +19,7 @@ from r2lab import r2lab_hostname, r2lab_id, ListOfChoices, ListOfChoicesNullRese
 
 default_master = 'sopnode-w1.inria.fr'
 
-default_pb_node = 11
+default_bp_node = 11
 default_fit_worker_node = '2'
 default_pc_worker_node = '0'
 
@@ -81,6 +81,8 @@ def run(*, gateway, slicename, master, bp, nodes, pcs,
 
     fit_worker_ids = nodes[:]
     pc_worker_ids = pcs[:]
+
+    bp_addr_suffix = bp + 100
 
     # the global scheduler
     scheduler = Scheduler(verbose=verbose)
@@ -167,6 +169,7 @@ def run(*, gateway, slicename, master, bp, nodes, pcs,
             verbose=verbose,
             label=f"preparing {r2lab_hostname(id)}",
             command=[
+                RunScript("config-vlan100.sh", "control", str(int(id)+100)),
                 Run("ip route replace 10.3.1.0/24 dev control.100"),
             ]
         ) for id, node in node_index.items()
@@ -181,8 +184,8 @@ def run(*, gateway, slicename, master, bp, nodes, pcs,
             verbose=verbose,
             label=f"preparing {r2lab_pc_hostname(id)}",
             command=[
+                RunScript("config-vlan100.sh", "eno1", str(int(id)+160)),
                 Run("ip route replace 10.3.1.0/24 dev eno1 via 192.168.3.100"),
-                Run("ip route replace 138.96.245.0/24 dev eno1 via 192.168.3.100")
             ]
         ) for id, node in pc_index.items()
     ]
@@ -204,13 +207,14 @@ def run(*, gateway, slicename, master, bp, nodes, pcs,
         verbose=verbose,
         label=f"configuring and running the ansible blueprint on {r2lab_hostname(bp)}",
         command=[
+            RunScript("config-vlan100.sh", "control", bp_addr_suffix),
             RunScript("config-playbook.sh", all_workers),
             # Following playbook to create a new k8s cluster wit master only
             #Run("docker run -t -v /root/SLICES/sopnode/ansible:/blueprint -v /root/.ssh/ssh_r2lab_key:/id_rsa_blueprint blueprint /root/.local/bin/ansible-playbook  -i inventories/sopnode_r2lab/cluster k8s-master.yaml --extra-vars @params.sopnode_r2lab.yaml"),
             # Following playbook to upload and rebuild all required libraries and add workers to the k8s cluster
             #Run("docker run -t -v /root/SLICES/sopnode/ansible:/blueprint -v /root/.ssh/ssh_r2lab_key:/id_rsa_blueprint blueprint /root/.local/bin/ansible-playbook  -i inventories/sopnode_r2lab/cluster k8s-node-orig.yaml --extra-vars @params.sopnode_r2lab.yaml"),
             # Following playbook optimized to speed up adding workers to the k8s cluster
-            Run("docker run -t -v /root/SLICES/sopnode/ansible:/blueprint -v /root/.ssh/ssh_r2lab_key:/id_rsa_blueprint blueprint /root/.local/bin/ansible-playbook  -i inventories/sopnode_r2lab/cluster k8s-node.yaml --extra-vars @params.sopnode_r2lab.yaml"),
+            Run("docker run -t -v /root/SLICES/sopnode/ansible:/blueprint -v /root/.ssh/ssh_r2lab_key:/id_rsa_blueprint -v /etc/hosts:/etc/hosts blueprint /root/.local/bin/ansible-playbook  -i inventories/sopnode_r2lab/cluster k8s-node.yaml --extra-vars @params.sopnode_r2lab.yaml"),
         ]
     )
 
@@ -241,8 +245,8 @@ def main():
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser.add_argument("-s", "--slicename", default=default_slicename,
                         help="specify an alternate slicename")
-    parser.add_argument("-B", "--node-ansible", dest='bp',
-                        default=default_pb_node,
+    parser.add_argument("-B", "--node-ansible", dest='bp', type=int, 
+                        default=default_bp_node,
                         help="specify ansible id node")
  
     parser.add_argument("-N", "--node-id", dest='nodes', default=[default_fit_worker_node],
