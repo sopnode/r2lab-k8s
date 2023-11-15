@@ -19,8 +19,9 @@ fi
 
 DIR="/root/SLICES/sopnode/ansible/inventories/sopnode_r2lab"
 
-IP_FIT_PREFIX="192.168.3."
-IP_PC_PREFIX="192.168.3.6"
+#IP_FIT_PREFIX="192.168.3."
+IP_FIT_PREFIX="192.168.100."
+IP_PC_PREFIX="192.168.100.16"
 
 items=""
 
@@ -34,7 +35,7 @@ do
 	    ;;
 	fit*)
 	    id=${WORKER#"fit"}
-	    IP="$IP_FIT_PREFIX"$((id+0))
+	    IP="$IP_FIT_PREFIX"$((id+100))
 	    echo "handling $WORKER $IP"
 	    ;;
 	*)

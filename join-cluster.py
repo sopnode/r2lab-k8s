@@ -28,7 +28,7 @@ default_slicename  = 'inria_sopnode'
 
 #default_image = 'u20.04-perf'
 default_image = 'slices-worker'
-default_bp_image = 'slices-docker-bp'
+default_bp_image = 'slices-docker-bp-vlan100'
 
 def _r2lab_name(x, prefix='fit'):
     return "{}{:02d}".format(prefix, r2lab_id(x))
@@ -167,8 +167,7 @@ def run(*, gateway, slicename, master, bp, nodes, pcs,
             verbose=verbose,
             label=f"preparing {r2lab_hostname(id)}",
             command=[
-                Run("ip route replace 10.3.1.0/24 dev control via 192.168.3.100"),
-                Run("ip route replace 138.96.245.0/24 dev control via 192.168.3.100"),
+                Run("ip route replace 10.3.1.0/24 dev control.100"),
             ]
         ) for id, node in node_index.items()
     ]
@@ -183,7 +182,7 @@ def run(*, gateway, slicename, master, bp, nodes, pcs,
             label=f"preparing {r2lab_pc_hostname(id)}",
             command=[
                 Run("ip route replace 10.3.1.0/24 dev eno1 via 192.168.3.100"),
-                Run("ip route replace 138.96.245.0/24 dev eno1 via 192.168.3.100"),
+                Run("ip route replace 138.96.245.0/24 dev eno1 via 192.168.3.100")
             ]
         ) for id, node in pc_index.items()
     ]
