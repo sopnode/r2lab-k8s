@@ -45,6 +45,7 @@ do
     esac
     items=$items"        $IP:\n"
     items=$items"          xx-name: $WORKER\n"
+    items=$items"          xx-local-ip: $IP\n"
 done
 cp $DIR/generic/hosts $DIR/cluster/hosts
 perl -i -pe "BEGIN{undef $/;} s/WORKER_ITEMS\n/$items/smg" $DIR/cluster/hosts
