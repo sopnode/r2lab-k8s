@@ -5,7 +5,7 @@ The *[join-cluster.py](./join-cluster.py)* script aims to demonstrate how to use
 This script uses the [SLICES blueprint](https://github.com/dsaucez/SLICES/), developed by Damien Saucez, which automates the k8s worker node setup using Ansible playbooks.
 
 Two different R2lab images will be used by this script: 
-- *slices-docker-bp* : Ubuntu 22.04 r2lab image with docker installed and that already include the SLICES repo used to launch the Ansible playbooks.
+- *slices-docker-bp-vlan100* : Ubuntu 22.04 r2lab image with docker installed and that already include the SLICES repo used to launch the Ansible playbooks.
 - *slices-worker* : Ubuntu 20.04 r2lab image with performance profile (no C-states) and UHD 4.5 library installed to be used with USRP B210 devices.
 
 The former image will be deployed on one of the R2lab nodes (*fit11* node by default) and will not be part of the k8s cluster.  
@@ -45,7 +45,7 @@ options:
 
 ### References
 
-* [SLICES blueprint](https://github.com/dsaucez/SLICES/)
+* [SLICES blueprint](https://github.com/dsaucez/SLICES/ , checkout branch sopnode-r2lab)
 * [R2lab welcome page](https://r2lab.inria.fr/)
 * [R2lab run page (requires login)](https://r2lab.inria.fr/run.md)
 * [github repo for this page](https://github.com/sopnode/r2lab-k8s)
@@ -357,3 +357,48 @@ pc01                  Ready    <none>          4m22s   v1.25.2
 sopnode-w1.inria.fr   Ready    control-plane   19d     v1.25.4
 ```
 
+### Extras
+
+The *slices-docker-bp-vlan100* R2lab image loaded in the node that launches the ansible playbook uses the *sopnode-r2lab* branch of the [SLICES blueprint](https://github.com/dsaucez/SLICES/).
+
+In particular, this branch defines the following two files:
+
+```bash
+root@fit11:~/SLICES/sopnode/ansible# cat params.sopnode_r2lab.yaml
+---
+# k8s config
+k8s:
+  runtime: docker
+  podSubnet: 10.244.0.0/16
+  serviceSubnet: 10.96.0.0/16
+  dnsDomain: cluster.local
+  apiserver_advertise_address: 192.168.100.92
+  calico:
+    nodeAddressAutodetectionV4:
+      cidrs:
+        - 192.168.100.0/24
+  encapsulation: VXLAN
+```
+
+and in the case of fit02 worker node:
+
+``` bash
+root@fit11:~/SLICES/sopnode/ansible# cat inventories/sopnode_r2lab/cluster/hosts
+all:
+  children:
+    computes:
+      hosts:
+        192.168.100.102:
+          xx-name: fit02
+          xx-local-ip: 192.168.100.102
+        192.168.100.92:
+          xx-name: sopnode-w1.inria.fr
+          xx-local-ip: 192.168.100.92
+    masters:
+      hosts:
+        192.168.100.92:
+          xx-name: sopnode-w1.inria.fr
+          xx-local-ip: 192.168.100.92
+    openvpn:
+      hosts:
+```
