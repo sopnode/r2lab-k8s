@@ -39,9 +39,8 @@ def r2lab_pc_hostname(id):
     """
     return _r2lab_name(id, 'pc')
 
-def run(*, gateway, slicename, master, bp, nodes, pcs,
-        load_images=False, image, image_bp,
-        verbose, dry_run,
+def run(*, gateway, slicename, master, create_cluster, bp, nodes, pcs,
+        load_images=False, image, image_bp, verbose, dry_run,
         ):
     """
     add R2lab nodes as workers in a k8s cluster
@@ -49,6 +48,7 @@ def run(*, gateway, slicename, master, bp, nodes, pcs,
     Arguments:
         slicename: the Unix login name (slice name) to enter the gateway
         master: k8s master node
+        create_cluster: True if the k8s cluster must be created 
         bp: node id for the FIT node used to run the ansible blueprint
         nodes: a list of FIT node ids to run the scenario on; strings or ints
                   are OK;
@@ -188,8 +188,6 @@ def run(*, gateway, slicename, master, bp, nodes, pcs,
         ) for id, node in pc_index.items()
     ]
     
-    prepare = prepare_fit_workers + prepare_pc_workers
-
     all_workers = ""
     for i in fit_worker_ids:
         all_workers += r2lab_hostname(i) + "-v100 "
@@ -197,18 +195,45 @@ def run(*, gateway, slicename, master, bp, nodes, pcs,
          all_workers += r2lab_pc_hostname(i) + "-v100 "
 
     
-    join = SshJob(
+    prepare_bp = SshJob(
         scheduler=scheduler,
-        required=prepare,
+        required=green_light,
         node=bpnode,
-        critical=False,
+        critical=True,
         verbose=verbose,
-        label=f"configuring and running the ansible blueprint on {r2lab_hostname(bp)}",
+        label=f"configuring the ansible blueprint on {r2lab_hostname(bp)}",
         command=[
             RunScript("config-vlan100.sh", r2lab_hostname(bp)+"-v100", "control", bp_addr_suffix),
             RunScript("config-playbook.sh", all_workers),
-            # Following playbook to create a new k8s cluster wit master only
-            #Run("docker run -t -v /root/SLICES/sopnode/ansible:/blueprint -v /root/.ssh/ssh_r2lab_key:/id_rsa_blueprint blueprint /root/.local/bin/ansible-playbook  -i inventories/sopnode_r2lab/cluster k8s-master.yaml --extra-vars @params.sopnode_r2lab.yaml"),
+        ]
+    )
+
+    prepare = prepare_fit_workers + prepare_pc_workers + [prepare_bp]
+
+    if create_cluster:
+        create_k8s = SshJob(
+            scheduler=scheduler,
+            required=prepare,
+            node=bpnode,
+            critical=True,
+            verbose=verbose,
+            label=f"Create the k8s cluster on {master} running the ansible blueprint on {r2lab_hostname(bp)}",
+            command=[
+            Run("docker run -t -v /root/SLICES/sopnode/ansible:/blueprint -v /root/.ssh/ssh_r2lab_key:/id_rsa_blueprint -v /etc/hosts:/etc/hosts blueprint /root/.local/bin/ansible-playbook  -i inventories/sopnode_r2lab/cluster k8s-master.yaml --extra-vars @params.sopnode_r2lab.yaml"),
+            ]
+        )
+        k8s_ready = [create_k8s]
+    else:
+        k8s_ready = prepare
+
+    join = SshJob(
+        scheduler=scheduler,
+        required=k8s_ready,
+        node=bpnode,
+        critical=True,
+        verbose=verbose,
+        label=f"Add the k8s workers by running the ansible blueprint on {r2lab_hostname(bp)}",
+        command=[
             # Following playbook to upload and rebuild all required libraries and add workers to the k8s cluster
             #Run("docker run -t -v /root/SLICES/sopnode/ansible:/blueprint -v /root/.ssh/ssh_r2lab_key:/id_rsa_blueprint blueprint /root/.local/bin/ansible-playbook  -i inventories/sopnode_r2lab/cluster k8s-node-orig.yaml --extra-vars @params.sopnode_r2lab.yaml"),
             # Following playbook optimized to speed up adding workers to the k8s cluster
@@ -259,7 +284,9 @@ def main():
                              "{default_pc_worker_node} by default, no pc nodes used")
     parser.add_argument("-M", "--master", default=default_master,
                         help="name of the k8s master node")
-    parser.add_argument("-v", "--verbose", default=False,
+    parser.add_argument("-C", "--create-cluster", default=False, action='store_true',
+                        dest='create_cluster', help="create a k8s cluster")
+    parser.add_argument("-v", "--verbose", default=False, 
                         action='store_true', dest='verbose',
                         help="run script in verbose mode")
     parser.add_argument("-n", "--dry-run", default=False,
@@ -278,8 +305,11 @@ def main():
     if '0' in args.nodes and '0' in args.pcs:
         print("join-cluster: choose at least one FIT or PC node to be added to the cluster")
         exit(1)
-    
-    print("join-cluster: Please ensure that k8s master is running fine and that:")
+    if args.create_cluster:
+        print(f"join-cluster: will create a k8s cluster with master on {args.master}.")
+        print(f"  WARNING: no k8s cluster should already run on {args.master} !")
+    else:
+        print("join-cluster: Please ensure that k8s master is running fine and that:")
     if '0' not in args.nodes:
         for i in args.nodes:
             print(f" - worker {r2lab_hostname(i)} not already part of the k8s cluster on {args.master}")
@@ -290,11 +320,11 @@ def main():
             print(f" - worker {r2lab_pc_hostname(i)} not already part of the k8s cluster on {args.master}")
     else:
         args.pcs.clear()
-    print(f"Ansible playbook will run on node {r2lab_hostname(args.bp)}")
+    print(f"Ansible playbooks will run on node {r2lab_hostname(args.bp)}")
 
     run(gateway=default_gateway, slicename=args.slicename, master=args.master,
-        bp=args.bp, nodes=args.nodes, pcs=args.pcs, load_images=args.load_images,
-        image=args.image, image_bp=args.image_bp,
+        create_cluster=args.create_cluster, bp=args.bp, nodes=args.nodes, pcs=args.pcs,
+        load_images=args.load_images, image=args.image, image_bp=args.image_bp,
         verbose=args.verbose, dry_run=args.dry_run
     )
 

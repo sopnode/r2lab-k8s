@@ -49,7 +49,4 @@ done
 cp $DIR/generic/hosts $DIR/cluster/hosts
 perl -i -pe "BEGIN{undef $/;} s/WORKER_ITEMS\n/$items/smg" $DIR/cluster/hosts
 echo "Configuring Ansible playbook $DIR/hosts:"
-diff $DIR/generic/hosts $DIR/cluster/hosts
-
-
-
+diff $DIR/generic/hosts $DIR/cluster/hosts || true
