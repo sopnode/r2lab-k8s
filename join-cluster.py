@@ -17,7 +17,7 @@ from apssh import (LocalNode, SshNode, SshJob, Run, RunString, RunScript,
 from r2lab import r2lab_hostname, r2lab_id, ListOfChoices, ListOfChoicesNullReset, find_local_embedded_script
 
 
-default_master = 'sopnode-w1.inria.fr'
+default_master = 'sopnode-w1-v100'
 
 default_bp_node = 11
 default_fit_worker_node = '2'
@@ -169,8 +169,7 @@ def run(*, gateway, slicename, master, bp, nodes, pcs,
             verbose=verbose,
             label=f"preparing {r2lab_hostname(id)}",
             command=[
-                RunScript("config-vlan100.sh", "control", str(int(id)+100)),
-                Run("ip route replace 10.3.1.0/24 dev control.100"),
+                RunScript("config-vlan100.sh", r2lab_hostname(id)+"-v100", "control", str(int(id)+100)),
             ]
         ) for id, node in node_index.items()
     ]
@@ -184,9 +183,8 @@ def run(*, gateway, slicename, master, bp, nodes, pcs,
             verbose=verbose,
             label=f"preparing {r2lab_pc_hostname(id)}",
             command=[
-                RunScript("config-vlan100.sh", "eno1", str(int(id)+160)),
-                Run("ip route replace 10.3.1.0/24 dev eno1 via 192.168.3.100"),
-            ]
+                RunScript("config-vlan100.sh", r2lab_pc_hostname(id)+"-v100", "eno1", str(int(id)+160)),
+             ]
         ) for id, node in pc_index.items()
     ]
     
@@ -194,9 +192,9 @@ def run(*, gateway, slicename, master, bp, nodes, pcs,
 
     all_workers = ""
     for i in fit_worker_ids:
-        all_workers += r2lab_hostname(i) + " "
+        all_workers += r2lab_hostname(i) + "-v100 "
     for i in pc_worker_ids:
-         all_workers += r2lab_pc_hostname(i) + " "
+         all_workers += r2lab_pc_hostname(i) + "-v100 "
 
     
     join = SshJob(
