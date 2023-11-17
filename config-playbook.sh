@@ -28,12 +28,12 @@ for WORKER in "$@"
 do
     case "$WORKER" in
 	pc01*|pc02*)
-	    id=${WORKER#"pc0"}
+	    id=$(echo "$WORKER" | sed -e "s/^pc0//" -e "s/-v100$//")
 	    IP="$IP_PC_PREFIX$id"
 	    echo "handling $WORKER IP: $IP"
 	    ;;
 	fit*)
-	    id=${WORKER#"fit"}
+	    id=$(echo "$WORKER" | sed -e "s/^fit//" -e "s/-v100$//")
 	    IP="$IP_FIT_PREFIX"$((id+100))
 	    echo "handling $WORKER $IP"
 	    ;;

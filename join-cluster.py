@@ -205,7 +205,7 @@ def run(*, gateway, slicename, master, bp, nodes, pcs,
         verbose=verbose,
         label=f"configuring and running the ansible blueprint on {r2lab_hostname(bp)}",
         command=[
-            RunScript("config-vlan100.sh", "control", bp_addr_suffix),
+            RunScript("config-vlan100.sh", r2lab_hostname(bp)+"-v100", "control", bp_addr_suffix),
             RunScript("config-playbook.sh", all_workers),
             # Following playbook to create a new k8s cluster wit master only
             #Run("docker run -t -v /root/SLICES/sopnode/ansible:/blueprint -v /root/.ssh/ssh_r2lab_key:/id_rsa_blueprint blueprint /root/.local/bin/ansible-playbook  -i inventories/sopnode_r2lab/cluster k8s-master.yaml --extra-vars @params.sopnode_r2lab.yaml"),
