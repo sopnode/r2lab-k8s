@@ -344,12 +344,6 @@ INFO:asyncssh:[conn=3, chan=3] Channel closed
 RUN OK
 ********************************************************************************
 
-
-
-
-./join-cluster.py -s my_slicename -N1 -P2 -l
-
-
 ```
 
 When the command returns, usually after 3-4 minutes, two new worker nodes should be available on the k8s cluster.
