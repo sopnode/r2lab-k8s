@@ -81,6 +81,7 @@ def run(*, gateway, slicename, master, create_cluster, bp, nodes, pcs,
 
     fit_worker_ids = nodes[:]
     pc_worker_ids = pcs[:]
+    workers_ids = fit_worker_ids + pc_worker_ids
 
     bp_addr_suffix = bp + 100
 
@@ -153,7 +154,7 @@ def run(*, gateway, slicename, master, create_cluster, bp, nodes, pcs,
                     label=f"switch on {r2lab_pc_hostname(id)}",
                     command=[
                         Run("rhubarbe-pdu", "on", r2lab_pc_hostname(id)),
-                        Run("ping", "-c 60 -q", r2lab_pc_hostname(id))
+                        Run("ping", "-c 80 -q", r2lab_pc_hostname(id))
                     ]
                 ) for id, node in pc_index.items()
             ]
@@ -226,20 +227,21 @@ def run(*, gateway, slicename, master, create_cluster, bp, nodes, pcs,
     else:
         k8s_ready = prepare
 
-    join = SshJob(
-        scheduler=scheduler,
-        required=k8s_ready,
-        node=bpnode,
-        critical=True,
-        verbose=verbose,
-        label=f"Add the k8s workers by running the ansible blueprint on {r2lab_hostname(bp)}",
-        command=[
-            # Following playbook to upload and rebuild all required libraries and add workers to the k8s cluster
-            #Run("docker run -t -v /root/SLICES/sopnode/ansible:/blueprint -v /root/.ssh/ssh_r2lab_key:/id_rsa_blueprint blueprint /root/.local/bin/ansible-playbook  -i inventories/sopnode_r2lab/cluster k8s-node-orig.yaml --extra-vars @params.sopnode_r2lab.yaml"),
-            # Following playbook optimized to speed up adding workers to the k8s cluster
-            Run("docker run -t -v /root/SLICES/sopnode/ansible:/blueprint -v /root/.ssh/ssh_r2lab_key:/id_rsa_blueprint -v /etc/hosts:/etc/hosts blueprint /root/.local/bin/ansible-playbook  -i inventories/sopnode_r2lab/cluster k8s-node.yaml --extra-vars @params.sopnode_r2lab.yaml"),
-        ]
-    )
+    if workers_ids:
+        join = SshJob(
+            scheduler=scheduler,
+            required=k8s_ready,
+            node=bpnode,
+            critical=True,
+            verbose=verbose,
+            label=f"Add the k8s workers by running the ansible blueprint on {r2lab_hostname(bp)}",
+            command=[
+                # Following playbook to upload and rebuild all required libraries and add workers to the k8s cluster
+                #Run("docker run -t -v /root/SLICES/sopnode/ansible:/blueprint -v /root/.ssh/ssh_r2lab_key:/id_rsa_blueprint blueprint /root/.local/bin/ansible-playbook  -i inventories/sopnode_r2lab/cluster k8s-node-orig.yaml --extra-vars @params.sopnode_r2lab.yaml"),
+                # Following playbook optimized to speed up adding workers to the k8s cluster
+                Run("docker run -t -v /root/SLICES/sopnode/ansible:/blueprint -v /root/.ssh/ssh_r2lab_key:/id_rsa_blueprint -v /etc/hosts:/etc/hosts blueprint /root/.local/bin/ansible-playbook  -i inventories/sopnode_r2lab/cluster k8s-node.yaml --extra-vars @params.sopnode_r2lab.yaml"),
+            ]
+        )
 
     scheduler.check_cycles()
     name = "join-cluster"
@@ -302,7 +304,7 @@ def main():
 
 
     args = parser.parse_args()
-    if '0' in args.nodes and '0' in args.pcs:
+    if not args.create_cluster and '0' in args.nodes and '0' in args.pcs:
         print("join-cluster: choose at least one FIT or PC node to be added to the cluster")
         exit(1)
     if args.create_cluster:
