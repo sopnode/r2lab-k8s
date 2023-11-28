@@ -31,6 +31,12 @@ else
 		IP="$IP_PC_PREFIX$id"
 		echo "handling $WORKER IP: $IP"
 		;;
+	    fit0*)
+		# handle fit08 specific case as 08 is interpreted as an octal value
+		id=$(echo "$WORKER" | sed -e "s/^fit0//" -e "s/-v100$//")
+		IP="$IP_FIT_PREFIX"$((id+100))
+		echo "handling $WORKER $IP"
+		;;
 	    fit*)
 		id=$(echo "$WORKER" | sed -e "s/^fit//" -e "s/-v100$//")
 		IP="$IP_FIT_PREFIX"$((id+100))
