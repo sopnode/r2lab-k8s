@@ -40,7 +40,7 @@ def r2lab_pc_hostname(id):
     return _r2lab_name(id, 'pc')
 
 def run(*, gateway, slicename, master, create_cluster, bp, nodes, pcs,
-        load_images=False, image, image_bp, verbose, dry_run,
+        sopnode_worker, load_images=False, image, image_bp, verbose, dry_run,
         ):
     """
     add R2lab nodes as workers in a k8s cluster
@@ -50,10 +50,11 @@ def run(*, gateway, slicename, master, create_cluster, bp, nodes, pcs,
         master: k8s master node
         create_cluster: True if the k8s cluster must be created 
         bp: node id for the FIT node used to run the ansible blueprint
-        nodes: a list of FIT node ids to run the scenario on; strings or ints
+        nodes: a list of optional FIT node ids to run the scenario on; strings or ints
                   are OK;
-        pcs: a list of PC node ids to run the scenario on; strings or ints
+        pcs: a list of optional PC node ids to run the scenario on; strings or ints
                   are OK;
+        sopnode_worker: an optional sopnode worker node
         node_master: the master node id, must be part of selected nodes
     """
 
@@ -194,7 +195,7 @@ def run(*, gateway, slicename, master, create_cluster, bp, nodes, pcs,
         all_workers += r2lab_hostname(i) + "-v100 "
     for i in pc_worker_ids:
          all_workers += r2lab_pc_hostname(i) + "-v100 "
-
+    all_workers += sopnode_worker
     
     prepare_bp = SshJob(
         scheduler=scheduler,
@@ -205,7 +206,7 @@ def run(*, gateway, slicename, master, create_cluster, bp, nodes, pcs,
         label=f"configuring the ansible blueprint on {r2lab_hostname(bp)}",
         command=[
             RunScript("config-vlan100.sh", r2lab_hostname(bp)+"-v100", "control", bp_addr_suffix),
-            RunScript("config-playbook.sh", all_workers),
+            RunScript("config-playbook.sh", master, all_workers),
         ]
     )
 
@@ -227,7 +228,7 @@ def run(*, gateway, slicename, master, create_cluster, bp, nodes, pcs,
     else:
         k8s_ready = prepare
 
-    if workers_ids:
+    if workers_ids or sopnode_worker:
         join = SshJob(
             scheduler=scheduler,
             required=k8s_ready,
@@ -285,7 +286,9 @@ def main():
                         help="specify as many pc ids as you want,"
                              "{default_pc_worker_node} by default, no pc nodes used")
     parser.add_argument("-M", "--master", default=default_master,
-                        help="name of the k8s master node")
+                        help="name of the k8s master node, default is {default_master}")
+    parser.add_argument("-S", "--sopnode-worker", default="",
+                        help="name of sopnode worker, none by default")
     parser.add_argument("-C", "--create-cluster", default=False, action='store_true',
                         dest='create_cluster', help="create a k8s cluster")
     parser.add_argument("-v", "--verbose", default=False, 
@@ -304,12 +307,15 @@ def main():
 
 
     args = parser.parse_args()
-    if not args.create_cluster and '0' in args.nodes and '0' in args.pcs:
+    no_workers = '0' in args.nodes and '0' in args.pcs and not args.sopnode_worker
+    if not args.create_cluster and no_workers:
         print("join-cluster: choose at least one FIT or PC node to be added to the cluster")
         exit(1)
     if args.create_cluster:
         print(f"join-cluster: will create a k8s cluster with master on {args.master}.")
         print(f"  WARNING: no k8s cluster should already run on {args.master} !")
+        if not no_workers:
+            print("Please ensure that:")
     else:
         print("join-cluster: Please ensure that k8s master is running fine and that:")
     if '0' not in args.nodes:
@@ -322,10 +328,13 @@ def main():
             print(f" - worker {r2lab_pc_hostname(i)} not already part of the k8s cluster on {args.master}")
     else:
         args.pcs.clear()
+    if args.sopnode_worker:
+        print(f" - worker {args.sopnode_worker} not already part of the k8s cluster on {args.master}")
     print(f"Ansible playbooks will run on node {r2lab_hostname(args.bp)}")
 
     run(gateway=default_gateway, slicename=args.slicename, master=args.master,
-        create_cluster=args.create_cluster, bp=args.bp, nodes=args.nodes, pcs=args.pcs,
+        create_cluster=args.create_cluster, bp=args.bp,
+        nodes=args.nodes, pcs=args.pcs, sopnode_worker=args.sopnode_worker,
         load_images=args.load_images, image=args.image, image_bp=args.image_bp,
         verbose=args.verbose, dry_run=args.dry_run
     )
