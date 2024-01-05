@@ -150,7 +150,7 @@ def run(*, gateway, slicename, master, create_cluster, bp, nodes, pcs,
                     scheduler=scheduler,
                     required=check_lease,
                     node=faraday,
-                    critical=True,
+                    critical=False,
                     verbose=verbose,
                     label=f"switch on {r2lab_pc_hostname(id)}",
                     command=[
