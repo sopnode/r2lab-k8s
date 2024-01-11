@@ -15,7 +15,7 @@ function usage() {
 DIR="/root/SLICES/sopnode/ansible/inventories/sopnode_r2lab"
 
 IP_FIT_PREFIX="192.168.100."
-IP_PC_PREFIX="192.168.100.16"
+IP_PC_PREFIX="192.168.100.6"
 
 items=""
 
