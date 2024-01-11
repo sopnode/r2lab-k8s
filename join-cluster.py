@@ -185,7 +185,8 @@ def run(*, gateway, slicename, master, create_cluster, bp, nodes, pcs,
             verbose=verbose,
             label=f"preparing {r2lab_pc_hostname(id)}",
             command=[
-                RunScript("config-vlan100.sh", r2lab_pc_hostname(id)+"-v100", "eno1", str(int(id)+160)),
+                #RunScript("config-vlan100.sh", r2lab_pc_hostname(id)+"-v100", "eno1", str(int(id)+60)),
+                Run("echo pc nodes have already their vlan100 interface configured"),
              ]
         ) for id, node in pc_index.items()
     ]
