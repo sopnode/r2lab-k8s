@@ -16,6 +16,6 @@ jobs:
         run: |
           ls ${{ github.workspace }}
           cd ${{ github.workspace }}
-          echo "Running command: "python3 join-cluster.py -n"
+          echo "Running command: python3 join-cluster.py -n"
           python3 join-cluster.py -n || exit 0
       - run: echo "🍏 This job's status is ${{ job.status }}."
