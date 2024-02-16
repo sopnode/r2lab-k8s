@@ -78,6 +78,11 @@ else
 	items=$items"        $IP:\n"
 	items=$items"          xx-name: $WORKER\n"
 	items=$items"          xx-local-ip: $IP\n"
+	case "$WORKER" in
+	    sopnode-*)
+		items=$items"          xx-docker-root-home: true\n"
+		;;
+	esac
     done
     cp $gener_hosts $DIR/cluster/hosts
     perl -i -pe "BEGIN{undef $/;} s/WORKER_ITEMS\n/$items/smg" $DIR/cluster/hosts
