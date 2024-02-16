@@ -222,7 +222,7 @@ def run(*, gateway, slicename, master, create_cluster, bp, nodes, pcs,
             verbose=verbose,
             label=f"Create the k8s cluster on {master} running the ansible blueprint on {r2lab_hostname(bp)}",
             command=[
-            Run("docker run -t -v /root/SLICES/sopnode/ansible:/blueprint -v /root/.ssh/ssh_r2lab_key:/id_rsa_blueprint -v /etc/hosts:/etc/hosts blueprint /root/.local/bin/ansible-playbook  -i inventories/sopnode_r2lab/cluster k8s-master.yaml --extra-vars @params.sopnode_r2lab.yaml"),
+            Run("docker run -t -v /root/SLICES/sopnode/ansible:/blueprint -v /root/.ssh/ssh_r2lab_key:/id_rsa_blueprint -v /etc/hosts:/etc/hosts blueprint /root/.local/bin/ansible-playbook  -i inventories/sopnode_r2lab/cluster k8s-master-r2lab.yaml --extra-vars @params.sopnode_r2lab.yaml"),
             ]
         )
         k8s_ready = [create_k8s]
