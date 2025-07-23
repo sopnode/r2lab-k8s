@@ -14,8 +14,8 @@ function usage() {
 
 DIR="/root/SLICES/sopnode/ansible/inventories/sopnode_r2lab"
 
-IP_FIT_PREFIX="192.168.100."
-IP_PC_PREFIX="192.168.100.6"
+IP_FIT_PREFIX="192.168.3."
+IP_PC_PREFIX="192.168.3.9"
 
 items=""
 
@@ -49,26 +49,26 @@ else
     do
 	case "$WORKER" in
 	    pc01*|pc02*)
-		id=$(echo "$WORKER" | sed -e "s/^pc0//" -e "s/-v100$//")
+		id=$(echo "$WORKER" | sed -e "s/^pc0//")
 		IP="$IP_PC_PREFIX$id"
 		echo "handling $WORKER IP: $IP"
 		;;
 	    fit0*)
 		# handle fit08 specific case as 08 is interpreted as an octal value
-		id=$(echo "$WORKER" | sed -e "s/^fit0//" -e "s/-v100$//")
-		IP="$IP_FIT_PREFIX"$((id+100))
+		id=$(echo "$WORKER" | sed -e "s/^fit0//")
+		IP="$IP_FIT_PREFIX"$id
 		echo "handling $WORKER $IP"
 		;;
 	    fit*)
-		id=$(echo "$WORKER" | sed -e "s/^fit//" -e "s/-v100$//")
-		IP="$IP_FIT_PREFIX"$((id+100))
+		id=$(echo "$WORKER" | sed -e "s/^fit//")
+		IP="$IP_FIT_PREFIX"$id
 		echo "handling $WORKER $IP"
 		;;
 	    sopnode-l1*)
-		IP="192.168.100.91"
+		IP="192.168.3.250"
 		;;
 	    sopnode-w1*)
-		IP="192.168.100.92"
+		IP="192.168.3.251"
 		;;
 	    *)
 		echo "Error, unknown worker $WORKER"

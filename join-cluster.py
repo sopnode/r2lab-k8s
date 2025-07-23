@@ -17,7 +17,7 @@ from apssh import (LocalNode, SshNode, SshJob, Run, RunString, RunScript,
 from r2lab import r2lab_hostname, r2lab_id, ListOfChoices, ListOfChoicesNullReset, find_local_embedded_script
 
 
-default_master = 'sopnode-w1-v100'
+default_master = 'sopnode-w1-v30'
 
 default_bp_node = 11
 default_fit_worker_node = '2'
@@ -28,7 +28,7 @@ default_slicename  = 'inria_sopnode'
 
 #default_image = 'u20.04-perf'
 default_image = 'slices-worker'
-default_bp_image = 'slices-docker-bp-vlan100'
+default_bp_image = 'slices-docker-bp-vlan30'
 
 def _r2lab_name(x, prefix='fit'):
     return "{}{:02d}".format(prefix, r2lab_id(x))
@@ -84,8 +84,6 @@ def run(*, gateway, slicename, master, create_cluster, bp, nodes, pcs,
     pc_worker_ids = pcs[:]
     workers_ids = fit_worker_ids + pc_worker_ids
 
-    bp_addr_suffix = bp + 100
-
     # the global scheduler
     scheduler = Scheduler(verbose=verbose)
 
@@ -112,8 +110,8 @@ def run(*, gateway, slicename, master, create_cluster, bp, nodes, pcs,
                     verbose=verbose,
                     label = f"Load image {image} on worker nodes",
                     commands=[
-                        Run("rhubarbe", "load", *fit_worker_ids, "-i", image),
-                        Run("rhubarbe", "wait", *fit_worker_ids),
+                        Run("rhubarbe", "load", *fit_worker_ids, "-i", image, "-t 500"),
+                        Run("rhubarbe", "wait", "-t 500", *fit_worker_ids),
                     ],
                 ),
                 SshJob(
@@ -124,8 +122,8 @@ def run(*, gateway, slicename, master, create_cluster, bp, nodes, pcs,
                     verbose=verbose,
                     label = f"Load image {image_bp} on the bp node",
                     command=[
-                        Run("rhubarbe", "load", bp, "-i", image_bp),
-                        Run("rhubarbe", "wait", bp),
+                        Run("rhubarbe", "load", bp, "-i", image_bp, "-t 500"),
+                        Run("rhubarbe", "wait", "-t 500", bp),
                     ]
                 )
             ]
@@ -139,8 +137,8 @@ def run(*, gateway, slicename, master, create_cluster, bp, nodes, pcs,
                     verbose=verbose,
                     label = f"Load image {image_bp} on the bp node",
                     command=[
-                        Run("rhubarbe", "load", bp, "-i", image_bp),
-                        Run("rhubarbe", "wait", bp),
+                        Run("rhubarbe", "load", bp, "-i", image_bp, "-t 500"),
+                        Run("rhubarbe", "wait", "-t 500", bp),
                     ]
                 )
             ]
@@ -160,42 +158,12 @@ def run(*, gateway, slicename, master, create_cluster, bp, nodes, pcs,
                 ) for id, node in pc_index.items()
             ]
             green_light += pc_green_light
-            
-    
-    prepare_fit_workers = [
-        SshJob(
-            scheduler=scheduler,
-            required=green_light,
-            node=node,
-            critical=True,
-            verbose=verbose,
-            label=f"preparing {r2lab_hostname(id)}",
-            command=[
-                RunScript("config-vlan100.sh", r2lab_hostname(id)+"-v100", "control", str(int(id)+100)),
-            ]
-        ) for id, node in node_index.items()
-    ]
-
-    prepare_pc_workers = [
-        SshJob(
-            scheduler=scheduler,
-            required=green_light,
-            node=node,
-            critical=True,
-            verbose=verbose,
-            label=f"preparing {r2lab_pc_hostname(id)}",
-            command=[
-                #RunScript("config-vlan100.sh", r2lab_pc_hostname(id)+"-v100", "eno1", str(int(id)+60)),
-                Run("echo pc nodes have already their vlan100 interface configured"),
-             ]
-        ) for id, node in pc_index.items()
-    ]
     
     all_workers = ""
     for i in fit_worker_ids:
-        all_workers += r2lab_hostname(i) + "-v100 "
+        all_workers += r2lab_hostname(i)
     for i in pc_worker_ids:
-         all_workers += r2lab_pc_hostname(i) + "-v100 "
+         all_workers += r2lab_pc_hostname(i)
     all_workers += sopnode_worker
     
     prepare_bp = SshJob(
@@ -206,13 +174,12 @@ def run(*, gateway, slicename, master, create_cluster, bp, nodes, pcs,
         verbose=verbose,
         label=f"configuring the ansible blueprint on {r2lab_hostname(bp)}",
         command=[
-            RunScript("config-vlan100.sh", r2lab_hostname(bp)+"-v100", "control", bp_addr_suffix),
             RunScript("config-playbook.sh", master, all_workers),
             Run("cd /root/SLICES; git pull; git checkout home-docker-root")
         ]
     )
 
-    prepare = prepare_fit_workers + prepare_pc_workers + [prepare_bp]
+    prepare = [prepare_bp]
 
     if create_cluster:
         create_k8s = SshJob(
