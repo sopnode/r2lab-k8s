@@ -158,7 +158,35 @@ def run(*, gateway, slicename, master, create_cluster, bp, nodes, pcs,
                 ) for id, node in pc_index.items()
             ]
             green_light += pc_green_light
-    
+
+    prepare_fit_workers = [
+        SshJob(
+            scheduler=scheduler,
+            required=green_light,
+            node=node,
+            critical=False,
+            verbose=verbose,
+            label=f"preparing {r2lab_hostname(id)}",
+            command=[
+                Run("ip link property add dev control altname net-30"),
+            ]
+        ) for id, node in node_index.items()
+    ]
+
+    prepare_pc_workers = [
+        SshJob(
+            scheduler=scheduler,
+            required=green_light,
+            node=node,
+            critical=False,
+            verbose=verbose,
+            label=f"preparing {r2lab_pc_hostname(id)}",
+            command=[
+                Run("ip link property add dev eno1 altname net-30"),
+             ]
+        ) for id, node in pc_index.items()
+    ]
+
     all_workers = ""
     for i in fit_worker_ids:
         all_workers += r2lab_hostname(i) + " "
