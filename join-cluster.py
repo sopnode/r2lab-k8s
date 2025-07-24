@@ -161,9 +161,9 @@ def run(*, gateway, slicename, master, create_cluster, bp, nodes, pcs,
     
     all_workers = ""
     for i in fit_worker_ids:
-        all_workers += r2lab_hostname(i)
+        all_workers += r2lab_hostname(i) + " "
     for i in pc_worker_ids:
-         all_workers += r2lab_pc_hostname(i)
+         all_workers += r2lab_pc_hostname(i) + " "
     all_workers += sopnode_worker
     
     prepare_bp = SshJob(
