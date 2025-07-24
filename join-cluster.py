@@ -111,7 +111,7 @@ def run(*, gateway, slicename, master, create_cluster, bp, nodes, pcs,
                     label = f"Load image {image} on worker nodes",
                     commands=[
                         Run("rhubarbe", "load", *fit_worker_ids, "-i", image, "-t 500"),
-                        Run("rhubarbe", "wait", "-t 500", *fit_worker_ids),
+                        Run("rhubarbe", "wait", *fit_worker_ids),
                     ],
                 ),
                 SshJob(
@@ -123,7 +123,7 @@ def run(*, gateway, slicename, master, create_cluster, bp, nodes, pcs,
                     label = f"Load image {image_bp} on the bp node",
                     command=[
                         Run("rhubarbe", "load", bp, "-i", image_bp, "-t 500"),
-                        Run("rhubarbe", "wait", "-t 500", bp),
+                        Run("rhubarbe", "wait", bp),
                     ]
                 )
             ]
@@ -138,7 +138,7 @@ def run(*, gateway, slicename, master, create_cluster, bp, nodes, pcs,
                     label = f"Load image {image_bp} on the bp node",
                     command=[
                         Run("rhubarbe", "load", bp, "-i", image_bp, "-t 500"),
-                        Run("rhubarbe", "wait", "-t 500", bp),
+                        Run("rhubarbe", "wait", bp),
                     ]
                 )
             ]
