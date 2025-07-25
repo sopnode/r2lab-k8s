@@ -27,7 +27,8 @@ default_gateway  = 'faraday.inria.fr'
 default_slicename  = 'inria_sopnode'
 
 #default_image = 'u20.04-perf'
-default_image = 'slices-worker'
+#default_image = 'slices-worker'
+default_image = 'u24.04-lowlat-uhd'
 default_bp_image = 'slices-docker-bp-vlan30'
 
 def _r2lab_name(x, prefix='fit'):
